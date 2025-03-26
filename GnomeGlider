@@ -1,0 +1,167 @@
+#!/bin/bash
+
+# Global variables
+LOG="/home/USERNAME/.WallChange.log" 			# path to log file | script requires log file to determine time between wallpaper changes.
+
+DIR_DAY="/home/USERNAME/Pictures/wallpapers/day"	# path to day wallpaper folder
+DIR_DUSK="/home/USERNAME/Pictures/wallpapers/dusk"	# path to dusk wallpaper folder
+DIR_NIGHT="/home/USERNAME/Pictures/wallpapers/night" 	# path to night wallpaper folder
+
+timer="5400" 						# time in seconds to wait between wallpaper changes | 5400s = 1.5 hours
+tolerance=$(expr $timer - 1201)				# timer after which Log update will be triggered. Used in the --smart option. 1200s = 20 min
+
+time_DAY="06:00" 					# when to start showing day wallpapers   | time in 24h format
+time_DUSK="17:00"					# when to start showing dusk wallpapers  | time in 24h format
+time_NIGHT="19:45"					# when to start showing night wallpapers | time in 24h format
+
+# Parse arguments
+ARG=${@:-}
+
+main(){
+	if [[ "${ARG}" = "--time" || "${ARG}" = "-t" ]]; then
+		print_from_log
+		exit
+		
+	elif [[ "${ARG}" = "--log" || "${ARG}" =  "-l" ]]; then
+		cat $LOG
+		exit
+	
+	elif [[ "${ARG}" = "--change" || "${ARG}" = "-c" ]]; then
+		time_to_change
+		exit
+		
+	elif [[ "${ARG}" = "--smart" || "${ARG}" = "-s" ]]; then
+		time_to_change
+		exit
+		
+	elif [[ "${ARG}" = "--force" || "${ARG}" = "-f" ]]; then
+		change_wall
+		echo "Wallpaper changed"
+		exit
+		
+	elif [[ "${ARG}" = "--help" ||  "${ARG}" = "-h" ]]; then
+		help_page
+		exit
+
+	else
+		echo "Error: Invalid option" 					# if argument is none of the available options, print error message.
+		exit
+	fi
+}
+
+
+help_page(){
+	# Display Help page
+	echo "Usage: wallpaper [OPTION]."
+	echo "options:"
+	echo 
+	echo "-t,  --time:		Print latest time the wallpaper was changed."
+	echo "-l,  --log:		Print all entries of Log file."
+	echo "-c.  --change:		Change wallpaper, update Log file."
+	echo "-s,  --smart:		Change wallpaper, update Log file IF there is "
+	echo "			less than 30 min before next scheduled change."
+	echo "-f;  --force:		Change wallpaper WITHOUT updating log file."
+	echo "-h;  --help:		Print this help menu."
+	echo
+}
+
+
+change_wall(){ 	# picks random wallpaper and sets it as wallpaper
+
+	time_of_day 										# run ToD function to get right path
+
+	PIC=$(ls $DIR/* | shuf -n1)
+	PID=$(pgrep -n gnome-session) 
+	export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ | tr '\0' '\n' | cut -d= -f2-)
+	gsettings set org.gnome.desktop.background picture-uri-dark "file://$PIC"		# changes dark theme wallpaper
+	gsettings set org.gnome.desktop.background picture-uri "file://$PIC"			# changes light theme wallpaper
+}
+
+
+time_to_change(){	# checks if it is time to change wallpaper; calls change_wall if it is
+
+	read_log_file 	# run read log function and get last time wallpaper was changed
+	
+	current_epochTime=$(date +%s) 						# current time in seconds since 1/1/1970
+	
+	if [[ "${ARG}" = "--change" || "${ARG}" = "-c" ]]; then			#  if -c option
+	
+		if [[ $((current_epochTime - lastChange)) -ge $timer ]]; then  	# if it's been longer than 2 hours, change wall | -ge -gt -lt -eq perform numeric comparisons
+			lastChange=$current_epochTime
+			change_wall
+			update_log
+			
+		else
+			exit
+		
+		fi
+	
+	elif [[ "${ARG}" = "--smart" || "${ARG}" = "-s" ]]; then			# if -s option
+
+		if [[ $((current_epochTime - lastChange)) -ge $tolerance ]]; then  	# if there is less than 30 min to the next scheduled change change and update log 
+			lastChange=$current_epochTime
+			change_wall
+			update_log
+			exit
+			
+		else									# otherwise just change wallpaper
+			change_wall
+			echo "Wallpaper changed"
+			exit
+		
+		fi
+	fi
+}
+
+
+update_log(){
+	echo -e "$(date +"%a %b %d %Y %H:%M:%S") \n$lastChange" >> $LOG 	# appends log file with latest wall change time | expanded date in first line is for human readability
+	echo "$(tail -n24 $LOG)" > $LOG 					# overwrites LOG with last 24 lines to keep record only of last 12 changes
+	echo "Wallpaper changed and log updated"
+}
+
+
+read_log_file(){ 								# reads last entry of last change from log file and writes it to variable
+
+	if [[ -f "$LOG" ]]; then 						# checks if log file exists
+		lastChange=$(tail -n1 $LOG) 					# passes last line from Log (epoch time) to variable
+	
+	else 									# creates working log file if log files doesn't exist
+		lastChange=$(($(date +%s) - $timer)) 				# otherwise passes current time minus $timer value to variable, so wallpaper change can be triggered
+		echo -e "$(date +"%a %b %d %Y %H:%M:%S") \n$lastChange" > $LOG	# then creates log file with value of variable
+	fi
+}
+
+
+print_from_log(){ # prints last entry from log file and writes it to variable
+
+	if [[ -f "$LOG" ]]; then						# checks if log file exists
+		lastChange=$(tail -n2 $LOG)					# passes last two lines of Log file (Human readable) to variable
+		
+	else 									# Passes error message to variable if it doesn't exist
+		lastChange="No Log file; unable to display last wallpaper change time"
+	fi
+	
+	echo "$lastChange"
+}
+
+
+time_of_day(){ 	# determines if "day", "dusk" or "night", outputs path to corresponding folder
+
+currentTime=$(date +%H:%M) 		# ToD in HH:MM format 
+  
+	if [[ "$currentTime" > $time_NIGHT ]] || [[ "$currentTime" < $time_DAY ]]; then 	#  < > = perform string comparisons
+		DIR=$DIR_NIGHT 									# if night, set Path to night path
+	elif [[ "$currentTime" == $time_DAY ]] || [[ "$currentTime" > $time_DAY ]] && [[ "$currentTime" < $time_DUSK ]]; then 
+		DIR=$DIR_DAY  									# if day, set Path to day path
+	else
+		DIR=$DIR_DUSK 									# otherwise, set Path to dusk path
+	fi
+}
+
+
+# Run main function
+
+main
+
+# end of script
