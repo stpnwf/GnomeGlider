@@ -8,7 +8,7 @@ This only works on the [Gnome Desktop Environment](http://gnome.org).
 
 ---
 
-![](./media/demo.mp4)
+<video src="./media/demo.mp4" controls></video>
 
 
 ## Installation & setup
