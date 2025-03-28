@@ -17,12 +17,13 @@ Create 3 folders (day, dusk and night) in your Wallpaper folder and populate the
 
 Download the script to a folder and make it executable (right click > Properties > Executable as Program); 
 
-Open the script, **write the path to the folders created (add your username)** and either start using it ([adding its directory to your $PATH](https://www.geeksforgeeks.org/add-directory-to-path-in-linux/) is optional), or configure [cron](https://linuxhandbook.com/crontab/) by running `crontab -e` and adding the code below to run it automatically and periodically.
+Open the script, **update the path to the folders created (add your username)** in the script and either start using it ([adding its directory to your $PATH](https://www.geeksforgeeks.org/add-directory-to-path-in-linux/) is optional), or configure [cron](https://linuxhandbook.com/crontab/) by running `crontab -e` and adding the code below to run it automatically and periodically.
 
 `*/5 * * * * /bin/bash /home/USERNAME/.scripts/GnomeGlider -c 2>&1`
 
 Adding this to cron will run the script every 5 minutes with `-c` argument and send any errors/outputs to dev null (digital limbo).
-Tweak the time interval to your liking. **Make sure to actually put your username.**
+While the script will run often, the wallpaper will only change after a certain amount of time has elapsed.
+Tweak the time interval to your liking. **Make sure to actually put your username** in the command above.
 
 ---
 
