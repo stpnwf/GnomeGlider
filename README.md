@@ -8,7 +8,7 @@ This only works on the [Gnome Desktop Environment](http://gnome.org).
 
 ---
 
-<video src="https://i.imgur.com/HIWgnD0.mp4" controls></video>
+<video src="./media/demo.mp4" controls></video>
 
 
 ## Installation & setup
