@@ -8,7 +8,7 @@ This only works on the [Gnome Desktop Environment](http://gnome.org).
 
 ---
 
-<video src="https://files.catbox.moe/kavqen.mp4" controls width="800" type="video/mp4"></video>
+<iframe src="https://files.catbox.moe/kavqen.mp4" controls width="800" type="video/mp4"></iframe>
 
 
 ## Installation & setup
